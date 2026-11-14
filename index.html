@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>わり算のひっさんマスター</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+    body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: #0d1b2a;
+      font-family: 'Hiragino Kaku Gothic ProN', 'メイリオ', sans-serif;
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    #canvas-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      pointer-events: none;
+    }
+    #app-container {
+      position: relative;
+      z-index: 10;
+      width: 100vw;
+      height: 100vh;
+    }
+    
+    /* 画面切り替え共通設定 */
+    .screen {
+      position: absolute;
+      inset: 0;
+      background: rgba(13, 27, 42, 0.95);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      padding: 20px;
+      z-index: 100;
+    }
+    .hidden {
+      display: none !important;
+    }
+
+    /* メニュー画面スタイル */
+    .title {
+      font-size: 2.8rem;
+      font-weight: bold;
+      color: #ffd166;
+      text-shadow: 0 0 10px rgba(255, 209, 102, 0.5);
+    }
+    .setting-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 15px 25px;
+      border-radius: 15px;
+      width: 90%;
+      max-width: 650px;
+    }
+    .group-label {
+      font-size: 1.2rem;
+      color: #4cc9f0;
+      font-weight: bold;
+    }
+    .btn-row {
+      display: flex;
+      gap: 12px;
+      width: 100%;
+      justify-content: center;
+    }
+    .toggle-btn {
+      flex: 1;
+      padding: 14px 10px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      border: 2px solid #4895ef;
+      background: rgba(0, 0, 0, 0.4);
+      color: #fff;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .toggle-btn.active {
+      background: #4895ef;
+      color: #fff;
+      box-shadow: 0 0 15px rgba(72, 149, 239, 0.8);
+      border-color: #ffd166;
+    }
+    .main-btn {
+      margin-top: 15px;
+      padding: 15px 70px;
+      font-size: 2.2rem;
+      font-weight: bold;
+      color: #fff;
+      background: linear-gradient(135deg, #ff477e, #ff5c8a);
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 0 20px rgba(255, 71, 126, 0.6);
+      transition: transform 0.2s;
+    }
+    .main-btn:active {
+      transform: scale(0.95);
+    }
+    #start-btn {
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+
+    /* ゲーム画面全体コンテナ */
+    #game-screen {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      z-index: 10;
+    }
+
+    #game-header {
+      height: 60px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 30px;
+      background: rgba(0, 0, 0, 0.3);
+    }
+    .info-box {
+      font-size: 1.4rem;
+      font-weight: bold;
+    }
+    .combo-box {
+      color: #ff477e;
+      font-size: 1.8rem;
+      font-weight: bold;
+    }
+    #bgm-btn {
+      padding: 6px 15px;
+      border-radius: 20px;
+      border: 1px solid #4cc9f0;
+      background: transparent;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    #game-body {
+      flex: 1;
+      display: flex;
+      width: 100%;
+      height: calc(100vh - 60px);
+    }
+    
+    /* 左側：筆算表示エリア */
+    #left-panel {
+      flex: 1.2;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+    #hissan-box {
+      background: rgba(255, 255, 255, 0.08);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 20px;
+      padding: 30px;
+      min-width: 320px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: all 0.3s;
+      position: relative;
+    }
+    #hissan-box.gold {
+      border-color: #ffd166;
+      box-shadow: 0 0 30px rgba(255, 209, 102, 0.8);
+      background: rgba(255, 209, 102, 0.15);
+    }
+    
+    .hissan-grid {
+      display: grid;
+      gap: 2px;
+      font-family: 'Courier New', Courier, monospace;
+      font-weight: bold;
+      font-size: 2.5rem;
+      position: relative;
+    }
+    .cell {
+      width: 50px;
+      height: 56px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      color: #fff;
+      z-index: 2;
+    }
+    .cell.active {
+      border: 3px solid #ff477e !important;
+      border-radius: 6px;
+      background: rgba(255, 71, 126, 0.25);
+      animation: blink-border 0.8s infinite alternate;
+    }
+    @keyframes blink-border {
+      from { border-color: #ff477e; }
+      to { border-color: #ffd166; }
+    }
+    
+    /* 小数点 */
+    .cell-dot::after {
+      content: '.';
+      position: absolute;
+      right: -6px;
+      bottom: 4px;
+      font-size: 2.5rem;
+      color: #ffd166;
+    }
+
+    .hissan-symbol-overlay {
+      position: absolute;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .cell-line-bottom {
+      border-bottom: 4px solid #fff;
+    }
+
+    /* 右側：操作パネル */
+    #right-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 30px;
+      padding: 20px;
+      position: relative;
+    }
+    #action-banner {
+      font-size: 3.2rem;
+      font-weight: bold;
+      color: #4cc9f0;
+      text-shadow: 0 0 15px rgba(76, 201, 240, 0.6);
+      height: 70px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .pop-in {
+      animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    @keyframes popIn {
+      0% { transform: scale(0.3); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    #choices-container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      width: 80%;
+      max-width: 320px;
+    }
+    .choice-btn {
+      width: 100%;
+      height: 90px;
+      font-size: 2.8rem;
+      font-weight: bold;
+      color: #fff;
+      background: linear-gradient(135deg, #4361ee, #3a0ca3);
+      border: 3px solid #4cc9f0;
+      border-radius: 20px;
+      cursor: pointer;
+      box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+      transition: transform 0.1s, background 0.2s;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .choice-btn:active {
+      transform: scale(0.95);
+    }
+
+    /* リザルト表示用 */
+    .result-card {
+      background: rgba(255, 255, 255, 0.08);
+      border: 2px solid #4895ef;
+      border-radius: 20px;
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      width: 80%;
+      max-width: 450px;
+      text-align: center;
+    }
+    .result-stat {
+      font-size: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px dashed rgba(255, 255, 255, 0.2);
+      padding-bottom: 8px;
+    }
+    .result-val {
+      color: #ffd166;
+      font-weight: bold;
+    }
+
+    /* × エフェクト */
+    #cross-effect {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 15rem;
+      color: #ff477e;
+      pointer-events: none;
+      opacity: 0;
+      z-index: 700;
+    }
+    .show-cross {
+      animation: crossAnim 0.5s ease-out;
+    }
+    @keyframes crossAnim {
+      0% { opacity: 1; transform: translate(-50%, -50%) scale(0.5); }
+      50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+      100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas-bg"></canvas>
+
+  <div id="app-container">
+    <!-- 1. メニュー画面 -->
+    <div id="menu-screen" class="screen">
+      <div class="title">割り算の筆算マスター</div>
+
+      <div class="setting-group">
+        <div class="group-label">【1】 難易度をえらぶ</div>
+        <div class="btn-row">
+          <button class="toggle-btn diff-btn" data-val="1">① わる数 1桁</button>
+          <button class="toggle-btn diff-btn" data-val="2">② わる数 2桁</button>
+          <button class="toggle-btn diff-btn" data-val="3">③ 小数の計算</button>
+        </div>
+      </div>
+
+      <div class="setting-group">
+        <div class="group-label">【2】 わられる数の桁数</div>
+        <div class="btn-row">
+          <button class="toggle-btn digit-btn" data-val="2">2桁</button>
+          <button class="toggle-btn digit-btn" data-val="3">3桁</button>
+        </div>
+      </div>
+
+      <div class="setting-group">
+        <div class="group-label">【3】 問題数</div>
+        <div class="btn-row">
+          <button class="toggle-btn qcount-btn" data-val="5">5問</button>
+          <button class="toggle-btn qcount-btn" data-val="10">10問</button>
+        </div>
+      </div>
+
+      <button id="start-btn" class="main-btn hidden">スタート！</button>
+    </div>
+
+    <!-- 2. ゲーム画面 -->
+    <div id="game-screen" class="hidden">
+      <div id="game-header">
+        <div class="info-box" id="q-count">第 1 / 5 問</div>
+        <div class="info-box" id="q-text" style="color: #ffd166;"></div>
+        <div class="combo-box" id="combo-display">0 COMBO!</div>
+        <button id="bgm-btn">🎵 BGM: ON</button>
+      </div>
+
+      <div id="game-body">
+        <div id="left-panel">
+          <div id="hissan-box">
+            <div id="hissan-grid" class="hissan-grid"></div>
+          </div>
+        </div>
+        <div id="right-panel">
+          <div id="action-banner">たてる</div>
+          <div id="choices-container"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. リザルト画面 -->
+    <div id="result-screen" class="screen hidden">
+      <div class="title">🎉 クリアおめでとう！</div>
+      <div class="result-card">
+        <div class="result-stat"><span>クリアタイム</span><span class="result-val" id="res-time">0秒</span></div>
+        <div class="result-stat"><span>さいこうコンボ</span><span class="result-val" id="res-maxcombo">0</span></div>
+        <div class="result-stat"><span>せいかい操作数</span><span class="result-val" id="res-ops">0回</span></div>
+      </div>
+      <button class="main-btn" id="retry-btn">メニューにもどる</button>
+    </div>
+  </div>
+
+  <div id="cross-effect">✕</div>
+
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      initMenuEvents();
+      initCanvas();
+      animateCanvas();
+    });
+
+    // --- メニュー選択管理 ---
+    let selectedDiff = null;
+    let selectedDigits = null;
+    let selectedQCount = null;
+
+    function initMenuEvents() {
+      document.querySelectorAll('.diff-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+          e.currentTarget.classList.add('active');
+          selectedDiff = parseInt(e.currentTarget.getAttribute('data-val'));
+
+          const d2 = document.querySelector('.digit-btn[data-val="2"]');
+          const d3 = document.querySelector('.digit-btn[data-val="3"]');
+          if (selectedDiff === 3) {
+            d2.textContent = '2桁(小数)';
+            d3.textContent = '3桁(小数)';
+          } else {
+            d2.textContent = '2桁';
+            d3.textContent = '3桁';
+          }
+          checkReady();
+        });
+      });
+
+      document.querySelectorAll('.digit-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          document.querySelectorAll('.digit-btn').forEach(b => b.classList.remove('active'));
+          e.currentTarget.classList.add('active');
+          selectedDigits = parseInt(e.currentTarget.getAttribute('data-val'));
+          checkReady();
+        });
+      });
+
+      document.querySelectorAll('.qcount-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          document.querySelectorAll('.qcount-btn').forEach(b => b.classList.remove('active'));
+          e.currentTarget.classList.add('active');
+          selectedQCount = parseInt(e.currentTarget.getAttribute('data-val'));
+          checkReady();
+        });
+      });
+
+      const startBtn = document.getElementById('start-btn');
+      startBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        startGame();
+      });
+
+      document.getElementById('retry-btn').addEventListener('click', () => {
+        backToMenu();
+      });
+
+      document.getElementById('bgm-btn').addEventListener('click', () => {
+        toggleBGM();
+      });
+    }
+
+    function checkReady() {
+      const btn = document.getElementById('start-btn');
+      if (selectedDiff !== null && selectedDigits !== null && selectedQCount !== null) {
+        btn.classList.remove('hidden');
+      } else {
+        btn.classList.add('hidden');
+      }
+    }
+
+    // --- 音響＆BGMシステム ---
+    const AudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let bgmInterval = null;
+    let isBgmOn = true;
+
+    function startBGM() {
+      if (!isBgmOn || bgmInterval) return;
+      if (AudioCtx.state === 'suspended') AudioCtx.resume();
+      
+      const sequence = [261.63, 329.63, 392.00, 523.25, 392.00, 329.63];
+      let noteIdx = 0;
+      
+      bgmInterval = setInterval(() => {
+        if (!isBgmOn) return;
+        const osc = AudioCtx.createOscillator();
+        const gain = AudioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = sequence[noteIdx % sequence.length];
+        gain.gain.setValueAtTime(0.05, AudioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, AudioCtx.currentTime + 0.2);
+        osc.connect(gain);
+        gain.connect(AudioCtx.destination);
+        osc.start();
+        osc.stop(AudioCtx.currentTime + 0.2);
+        noteIdx++;
+      }, 220);
+    }
+
+    function stopBGM() {
+      if (bgmInterval) {
+        clearInterval(bgmInterval);
+        bgmInterval = null;
+      }
+    }
+
+    function toggleBGM() {
+      isBgmOn = !isBgmOn;
+      document.getElementById('bgm-btn').textContent = `🎵 BGM: ${isBgmOn ? 'ON' : 'OFF'}`;
+      if (isBgmOn) startBGM(); else stopBGM();
+    }
+
+    function playSharpMetalSound() {
+      if (AudioCtx.state === 'suspended') AudioCtx.resume();
+      const osc = AudioCtx.createOscillator();
+      const gain = AudioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(1200, AudioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(300, AudioCtx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.8, AudioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, AudioCtx.currentTime + 0.15);
+      osc.connect(gain);
+      gain.connect(AudioCtx.destination);
+      osc.start();
+      osc.stop(AudioCtx.currentTime + 0.15);
+    }
+
+    function playWrongSound() {
+      if (AudioCtx.state === 'suspended') AudioCtx.resume();
+      const osc = AudioCtx.createOscillator();
+      const gain = AudioCtx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(150, AudioCtx.currentTime);
+      gain.gain.setValueAtTime(0.5, AudioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, AudioCtx.currentTime + 0.25);
+      osc.connect(gain);
+      gain.connect(AudioCtx.destination);
+      osc.start();
+      osc.stop(AudioCtx.currentTime + 0.25);
+    }
+
+    function playClearSound() {
+      if (AudioCtx.state === 'suspended') AudioCtx.resume();
+      const notes = [523.25, 659.25, 783.99, 1046.50];
+      notes.forEach((freq, i) => {
+        const osc = AudioCtx.createOscillator();
+        const gain = AudioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        const startTime = AudioCtx.currentTime + i * 0.08;
+        gain.gain.setValueAtTime(0.5, startTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.3);
+        osc.connect(gain);
+        gain.connect(AudioCtx.destination);
+        osc.start(startTime);
+        osc.stop(startTime + 0.3);
+      });
+    }
+
+    // --- 背景アニメーション ---
+    const canvas = document.getElementById('canvas-bg');
+    const ctx = canvas.getContext('2d');
+    let width, height;
+    let meteors = [];
+    let stars = [];
+    let saturns = [];
+    let fireworks = [];
+
+    function initCanvas() {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+      stars = Array.from({ length: 80 }, () => ({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        r: Math.random() * 1.5,
+        alpha: Math.random()
+      }));
+      updateMeteorCount();
+      saturns = [
+        { x: width * 0.15, y: height * 0.2, radius: 25, angle: -0.3 },
+        { x: width * 0.85, y: height * 0.75, radius: 18, angle: 0.4 }
+      ];
+    }
+
+    function updateMeteorCount() {
+      let count = 15 + Math.floor(combo / 10) * 15;
+      meteors = Array.from({ length: Math.min(count, 80) }, () => createMeteor());
+    }
+
+    function createMeteor() {
+      let speedMult = 1 + Math.floor(combo / 10) * 0.5;
+      return {
+        x: Math.random() * width * 1.5 - width * 0.2,
+        y: Math.random() * -height * 0.5,
+        length: (Math.random() * 80 + 40) * speedMult,
+        speed: (Math.random() * 8 + 4) * speedMult,
+        thick: Math.random() * 2 + 1
+      };
+    }
+
+    function triggerFireworks() {
+      for (let i = 0; i < 5; i++) {
+        setTimeout(() => {
+          const cx = Math.random() * width * 0.8 + width * 0.1;
+          const cy = Math.random() * height * 0.5 + height * 0.1;
+          for (let j = 0; j < 40; j++) {
+            const angle = (Math.PI * 2 / 40) * j;
+            const speed = Math.random() * 6 + 2;
+            fireworks.push({
+              x: cx, y: cy,
+              vx: Math.cos(angle) * speed,
+              vy: Math.sin(angle) * speed,
+              alpha: 1,
+              color: `hsl(${Math.random() * 360}, 100%, 65%)`
+            });
+          }
+        }, i * 200);
+      }
+    }
+
+    function animateCanvas() {
+      ctx.fillStyle = 'rgba(13, 27, 42, 0.4)';
+      ctx.fillRect(0, 0, width, height);
+
+      stars.forEach(s => {
+        ctx.fillStyle = `rgba(255, 255, 255, ${s.alpha})`;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      saturns.forEach(st => {
+        ctx.save();
+        ctx.translate(st.x, st.y);
+        ctx.rotate(st.angle);
+        ctx.strokeStyle = 'rgba(255, 209, 102, 0.6)';
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, st.radius * 2.2, st.radius * 0.6, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = '#e0a96d';
+        ctx.beginPath();
+        ctx.arc(0, 0, st.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+
+      meteors.forEach((m, idx) => {
+        m.x -= m.speed;
+        m.y += m.speed * 1.5;
+        if (m.y > height || m.x < -100) {
+          meteors[idx] = createMeteor();
+        }
+        ctx.strokeStyle = combo >= 10 ? 'rgba(255, 209, 102, 0.8)' : 'rgba(76, 201, 240, 0.6)';
+        ctx.lineWidth = m.thick;
+        ctx.beginPath();
+        ctx.moveTo(m.x, m.y);
+        ctx.lineTo(m.x + m.length * 0.6, m.y - m.length);
+        ctx.stroke();
+      });
+
+      fireworks.forEach((f) => {
+        f.x += f.vx;
+        f.y += f.vy;
+        f.alpha -= 0.015;
+        ctx.fillStyle = f.color;
+        ctx.globalAlpha = Math.max(0, f.alpha);
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      });
+      fireworks = fireworks.filter(f => f.alpha > 0);
+
+      requestAnimationFrame(animateCanvas);
+    }
+
+    window.addEventListener('resize', initCanvas);
+
+    // --- ゲーム進行＆ステート ---
+    let currentQIndex = 0;
+    let totalQuestions = 5;
+    let combo = 0;
+    let maxCombo = 0;
+    let totalCorrectOps = 0;
+    let startTime = 0;
+    let isProcessing = false;
+
+    let currentProblem = null;
+    let stepIndex = 0;
+    let currentStep = null;
+    let gridState = [];
+    let gridLines = [];
+    let gridDots = [];
+
+    function startGame() {
+      totalQuestions = selectedQCount;
+      document.getElementById('menu-screen').classList.add('hidden');
+      document.getElementById('result-screen').classList.add('hidden');
+      document.getElementById('game-screen').classList.remove('hidden');
+      
+      currentQIndex = 0;
+      combo = 0;
+      maxCombo = 0;
+      totalCorrectOps = 0;
+      startTime = Date.now();
+      startBGM();
+      updateHeader();
+      loadNextQuestion();
+    }
+
+    function updateHeader() {
+      document.getElementById('q-count').textContent = `第 ${currentQIndex + 1} / ${totalQuestions} 問`;
+      if (currentProblem) {
+        document.getElementById('q-text').textContent = `${currentProblem.dividendStr} ÷ ${currentProblem.divisorStr}`;
+      }
+      document.getElementById('combo-display').textContent = `${combo} COMBO!`;
+      updateMeteorCount();
+    }
+
+    // --- 問題生成 ---
+    function generateProblem() {
+      let divisor, quotient, dividend;
+
+      if (selectedDiff === 1) {
+        divisor = Math.floor(Math.random() * 8) + 2;
+        quotient = selectedDigits === 2 ? Math.floor(Math.random() * 40) + 10 : Math.floor(Math.random() * 400) + 100;
+        dividend = divisor * quotient;
+        return buildProblemData(dividend.toString(), divisor.toString(), quotient.toString(), false);
+      } else if (selectedDiff === 2) {
+        divisor = Math.floor(Math.random() * 80) + 11;
+        quotient = selectedDigits === 2 ? Math.floor(Math.random() * 8) + 2 : Math.floor(Math.random() * 40) + 10;
+        dividend = divisor * quotient;
+        return buildProblemData(dividend.toString(), divisor.toString(), quotient.toString(), false);
+      } else {
+        divisor = Math.floor(Math.random() * 8) + 2;
+        let qInt = Math.floor(Math.random() * 4) + 1;
+        let qDec = Math.floor(Math.random() * 8) + 1;
+        let quotientVal = parseFloat(`${qInt}.${qDec}`);
+        dividend = Math.round(divisor * quotientVal * 10) / 10;
+        return buildProblemData(dividend.toFixed(1), divisor.toString(), quotientVal.toFixed(1), true);
+      }
+    }
+
+    function buildProblemData(dividendStr, divisorStr, quotientStr, isDecimal) {
+      let steps = [];
+      let divDigits = dividendStr.replace('.', '').split('');
+      let currentValStr = "";
+      let decimalDotPlaced = false;
+      let currentRow = 2;
+
+      let dotPos = dividendStr.indexOf('.');
+
+      for (let i = 0; i < divDigits.length; i++) {
+        currentValStr += divDigits[i];
+        let currentNum = parseInt(currentValStr);
+        let divNum = parseInt(divisorStr);
+
+        if (currentNum < divNum && steps.length === 0 && i < divDigits.length - 1) {
+          continue;
+        }
+
+        if (isDecimal && !decimalDotPlaced && dotPos > 0 && i >= dotPos) {
+          steps.push({
+            type: 'dot',
+            text: '小数点をうつ',
+            ans: '.',
+            targetRow: 0,
+            targetCol: divisorStr.length + dotPos - 1
+          });
+          decimalDotPlaced = true;
+        }
+
+        let qDigit = Math.floor(currentNum / divNum);
+        let prod = qDigit * divNum;
+        let rem = currentNum - prod;
+
+        let actualColInGrid = divisorStr.length + i;
+
+        // 1. たてる
+        steps.push({
+          type: 'tateru',
+          text: 'たてる',
+          ans: qDigit.toString(),
+          targetRow: 0,
+          targetCol: actualColInGrid
+        });
+
+        // 2. かける
+        steps.push({
+          type: 'kakeru',
+          text: 'かける',
+          ans: prod.toString(),
+          row: currentRow,
+          endCol: actualColInGrid
+        });
+
+        // 3. ひく
+        steps.push({
+          type: 'hiku',
+          text: 'ひく',
+          ans: rem.toString(),
+          row: currentRow + 1,
+          endCol: actualColInGrid
+        });
+
+        currentRow += 2;
+
+        // --- 略式処理判定（末尾が0でおろす必要がなく直接「商に0をたてる」パターン） ---
+        if (rem === 0 && i < divDigits.length - 1 && divDigits[i + 1] === '0' && i + 1 === divDigits.length - 1 && !isDecimal) {
+          let nextActualCol = divisorStr.length + i + 1;
+          steps.push({
+            type: 'tateru',
+            text: 'たてる',
+            ans: '0',
+            targetRow: 0,
+            targetCol: nextActualCol
+          });
+          break; // 計算終了
+        }
+
+        // 4. おろす (通常の処理)
+        if (i < divDigits.length - 1) {
+          steps.push({
+            type: 'orosu',
+            text: 'おろす',
+            ans: divDigits[i+1],
+            row: currentRow - 1,
+            targetCol: divisorStr.length + i + 1
+          });
+        }
+
+        currentValStr = rem.toString();
+      }
+
+      return { dividendStr, divisorStr, quotientStr, steps, isDecimal, dotPos };
+    }
+
+    // --- ゲーム進行＆描画 ---
+    function loadNextQuestion() {
+      if (currentQIndex >= totalQuestions) {
+        showResultScreen();
+        return;
+      }
+
+      currentProblem = generateProblem();
+      updateHeader();
+      stepIndex = 0;
+      initHissanGrid();
+      processCurrentStep();
+    }
+
+    function initHissanGrid() {
+      const grid = document.getElementById('hissan-grid');
+      grid.innerHTML = '';
+
+      const { dividendStr, divisorStr, isDecimal, dotPos } = currentProblem;
+      const cleanDividend = dividendStr.replace('.', '');
+      const cols = divisorStr.length + cleanDividend.length;
+      const rows = 12;
+
+      grid.style.gridTemplateColumns = `repeat(${cols}, 50px)`;
+
+      gridState = Array.from({ length: rows }, () => Array(cols).fill(''));
+      gridLines = [];
+      gridDots = [];
+
+      for (let c = 0; c < divisorStr.length; c++) {
+        gridState[1][c] = divisorStr[c];
+      }
+      for (let c = 0; c < cleanDividend.length; c++) {
+        gridState[1][divisorStr.length + c] = cleanDividend[c];
+      }
+
+      if (isDecimal && dotPos > 0) {
+        gridDots.push({ r: 1, c: divisorStr.length + dotPos - 1 });
+      }
+
+      renderGrid();
+    }
+
+    function renderGrid(activePos = null) {
+      const grid = document.getElementById('hissan-grid');
+      grid.innerHTML = '';
+      const { dividendStr, divisorStr } = currentProblem;
+      const cleanDividend = dividendStr.replace('.', '');
+      const cols = divisorStr.length + cleanDividend.length;
+
+      let maxRowNeeded = 3;
+      gridState.forEach((row, r) => {
+        if (row.some(c => c !== null && c !== '')) maxRowNeeded = Math.max(maxRowNeeded, r + 1);
+      });
+      gridLines.forEach(l => {
+        maxRowNeeded = Math.max(maxRowNeeded, l.row + 1);
+      });
+
+      if (currentStep && currentStep.row !== undefined) {
+        maxRowNeeded = Math.max(maxRowNeeded, currentStep.row + 1);
+      }
+
+      const svgOverlay = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svgOverlay.setAttribute('class', 'hissan-symbol-overlay');
+      svgOverlay.style.width = `${cols * 52}px`;
+      svgOverlay.style.height = `${maxRowNeeded * 58}px`;
+      
+      const arcCol = divisorStr.length - 1;
+      const startX = (arcCol + 1) * 52 - 6;
+      const endX = cols * 52;
+      const topY = 58;
+
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', `M ${startX - 12} ${topY + 54} Q ${startX} ${topY + 20} ${startX} ${topY} L ${endX} ${topY}`);
+      path.setAttribute('stroke', '#ffffff');
+      path.setAttribute('stroke-width', '4');
+      path.setAttribute('fill', 'none');
+      svgOverlay.appendChild(path);
+      grid.appendChild(svgOverlay);
+
+      for (let r = 0; r < maxRowNeeded; r++) {
+        for (let c = 0; c < cols; c++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          
+          let val = gridState[r][c];
+          cell.textContent = val;
+
+          if (gridDots.some(d => d.r === r && d.c === c)) {
+            cell.classList.add('cell-dot');
+          }
+
+          if (gridLines.some(l => l.row === r && c >= l.startCol && c <= l.endCol)) {
+            cell.classList.add('cell-line-bottom');
+          }
+
+          if (activePos && activePos.r === r && activePos.c === c) {
+            cell.classList.add('active');
+          }
+
+          grid.appendChild(cell);
+        }
+      }
+    }
+
+    function processCurrentStep() {
+      if (stepIndex >= currentProblem.steps.length) {
+        finishProblem();
+        return;
+      }
+
+      currentStep = currentProblem.steps[stepIndex];
+      
+      const banner = document.getElementById('action-banner');
+      banner.textContent = currentStep.text;
+      banner.classList.remove('pop-in');
+      void banner.offsetWidth;
+      banner.classList.add('pop-in');
+
+      setupChoices();
+
+      let activePos = null;
+      if (currentStep.type === 'tateru' || currentStep.type === 'dot') {
+        activePos = { r: 0, c: currentStep.targetCol };
+      } else if (currentStep.type === 'kakeru') {
+        activePos = { r: currentStep.row, c: currentStep.endCol };
+      } else if (currentStep.type === 'hiku') {
+        activePos = { r: currentStep.row, c: currentStep.endCol };
+      } else if (currentStep.type === 'orosu') {
+        activePos = { r: currentStep.row, c: currentStep.targetCol };
+      }
+
+      renderGrid(activePos);
+    }
+
+    function setupChoices() {
+      const container = document.getElementById('choices-container');
+      container.innerHTML = '';
+
+      if (currentStep.type === 'dot') {
+        const btn = document.createElement('button');
+        btn.className = 'choice-btn';
+        btn.textContent = '．';
+        btn.onclick = () => handleAnswer('.');
+        container.appendChild(btn);
+        return;
+      }
+
+      const correctAns = currentStep.ans;
+      let wrongAns = generateWrongChoice(correctAns);
+
+      let options = [correctAns, wrongAns];
+      if (Math.random() < 0.5) options.reverse();
+
+      options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'choice-btn';
+        btn.textContent = opt;
+        btn.onclick = () => handleAnswer(opt);
+        container.appendChild(btn);
+      });
+    }
+
+    function generateWrongChoice(correct) {
+      let num = parseInt(correct);
+      if (isNaN(num)) return '0';
+      let diff = Math.random() < 0.5 ? 1 : -1;
+      let wrong = num + diff;
+      if (wrong < 0) wrong = num + 2;
+      return wrong.toString();
+    }
+
+    function handleAnswer(selected) {
+      if (isProcessing) return;
+
+      if (selected === currentStep.ans) {
+        playSharpMetalSound();
+        combo++;
+        totalCorrectOps++;
+        if (combo > maxCombo) maxCombo = combo;
+        updateHeader();
+        
+        applyStepToGrid();
+        renderGrid(null);
+
+        stepIndex++;
+        isProcessing = true;
+        setTimeout(() => {
+          isProcessing = false;
+          processCurrentStep();
+        }, 200);
+      } else {
+        playWrongSound();
+        combo = 0;
+        updateHeader();
+        showCrossEffect();
+      }
+    }
+
+    function showCrossEffect() {
+      const cross = document.getElementById('cross-effect');
+      cross.classList.remove('show-cross');
+      void cross.offsetWidth;
+      cross.classList.add('show-cross');
+    }
+
+    function applyStepToGrid() {
+      const { type, ans, targetCol, endCol, row } = currentStep;
+
+      if (type === 'tateru') {
+        gridState[0][targetCol] = ans;
+      } else if (type === 'dot') {
+        gridDots.push({ r: 0, c: targetCol });
+      } else if (type === 'kakeru') {
+        let str = ans;
+        for (let i = 0; i < str.length; i++) {
+          gridState[row][endCol - (str.length - 1 - i)] = str[i];
+        }
+        gridLines.push({
+          row: row,
+          startCol: endCol - str.length + 1,
+          endCol: endCol
+        });
+      } else if (type === 'hiku') {
+        let str = ans;
+        for (let i = 0; i < str.length; i++) {
+          gridState[row][endCol - (str.length - 1 - i)] = str[i];
+        }
+      } else if (type === 'orosu') {
+        gridState[row][targetCol] = ans;
+      }
+    }
+
+    function finishProblem() {
+      playClearSound();
+      triggerFireworks();
+
+      const box = document.getElementById('hissan-box');
+      box.classList.add('gold');
+
+      document.getElementById('action-banner').textContent = 'クリア！';
+      document.getElementById('choices-container').innerHTML = '';
+
+      setTimeout(() => {
+        box.classList.remove('gold');
+        currentQIndex++;
+        loadNextQuestion();
+      }, 1800);
+    }
+
+    function showResultScreen() {
+      stopBGM();
+      let elapsedTime = Math.floor((Date.now() - startTime) / 1000);
+      document.getElementById('res-time').textContent = `${elapsedTime} 秒`;
+      document.getElementById('res-maxcombo').textContent = `${maxCombo} COMBO`;
+      document.getElementById('res-ops').textContent = `${totalCorrectOps} 回`;
+
+      document.getElementById('game-screen').classList.add('hidden');
+      document.getElementById('result-screen').classList.add('hidden');
+      document.getElementById('result-screen').classList.remove('hidden');
+    }
+
+    function backToMenu() {
+      document.getElementById('result-screen').classList.add('hidden');
+      document.getElementById('game-screen').classList.add('hidden');
+      document.getElementById('menu-screen').classList.remove('hidden');
+    }
+  </script>
+</body>
+</html>
